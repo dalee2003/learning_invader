@@ -12,6 +12,12 @@ use std::{
     {io, thread},
 };
 
+use learn_invaders::{
+    frame::{self, new_frame, Drawable, Frame},
+    render,
+    player::Player,
+};
+
 fn main() -> Result<(), Box<dyn Error>>{
     let mut audio = Audio::new();
 
@@ -29,12 +35,43 @@ fn main() -> Result<(), Box<dyn Error>>{
     stdout.execute(EnterAlternateScreen)?;
     stdout.execute(Hide)?;
 
+    //Render loop in separate thread
+    let (render_tx, render_rx) = mpsc::channel();
+    let render_handle = thread::spawn(move || {
+        let mut last_frame = frame::new_frame();
+        let mut stdout = io::stdout();
+        render::render(&mut stdout, &last_frame, &last_frame, true);
+        loop{
+            let curr_frame = match render_rx.recv(){
+                Ok(x) => x,
+                Err(_) => break,
+            };
+            render::render(&mut stdout, &last_frame, &curr_frame, false);
+            last_frame = curr_frame;
+        }
+    });
+
     //Game Loop
+    let mut player = Player::new();
+    let mut instant = Instant::now();
     'gameloop: loop{
+        //per frame init
+        let delta = instant.elapsed();
+        instant = Instant::now();
+        let mut curr_frame = new_frame();
+
+
         //Input
         while event::poll(Duration::default())?{
             if let Event::Key(key_event) = event::read()?{
                 match key_event.code{
+                    KeyCode::Left => player.move_left(),
+                    KeyCode::Right => player.move_right(),
+                    KeyCode::Char(' ') |  KeyCode::Enter => {
+                        if player.shoot(){
+                            audio.play("pew");
+                        }
+                    },
                     KeyCode::Esc | KeyCode::Char('q') => {
                         audio.play("lose");
                         break 'gameloop;
@@ -43,9 +80,19 @@ fn main() -> Result<(), Box<dyn Error>>{
                 }
             }
         }
+
+        //updates
+        player.update(delta);
+
+        //Draw and render
+        player.draw(&mut curr_frame);
+        let _ = render_tx.send(curr_frame); //will false first couple times because this game loop will be set up before child loop is ready -> ignore error
+        thread::sleep(Duration::from_millis(1));
     }
 
 
+    drop(render_tx);
+    render_handle.join().unwrap();
     audio.wait(); //block until audio is done playing
     stdout.execute(Show)?;
     stdout.execute(LeaveAlternateScreen)?;
