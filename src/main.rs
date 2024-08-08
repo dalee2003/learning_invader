@@ -14,6 +14,7 @@ use std::{
 
 use learn_invaders::{
     frame::{self, new_frame, Drawable, Frame},
+    invader::Invaders,
     render,
     player::Player,
 };
@@ -54,6 +55,7 @@ fn main() -> Result<(), Box<dyn Error>>{
     //Game Loop
     let mut player = Player::new();
     let mut instant = Instant::now();
+    let mut invaders = Invaders::new();
     'gameloop: loop{
         //per frame init
         let delta = instant.elapsed();
@@ -83,9 +85,13 @@ fn main() -> Result<(), Box<dyn Error>>{
 
         //updates
         player.update(delta);
+        if invaders.update(delta){audio.play("move");}
 
         //Draw and render
-        player.draw(&mut curr_frame);
+        //player.draw(&mut curr_frame);
+        //invaders.draw(&mut curr_frame);
+        let drawables: Vec<&dyn Drawable> = vec![&player, &invaders];
+        for drawable in drawables{drawable.draw(&mut curr_frame);}
         let _ = render_tx.send(curr_frame); //will false first couple times because this game loop will be set up before child loop is ready -> ignore error
         thread::sleep(Duration::from_millis(1));
     }

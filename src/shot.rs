@@ -21,7 +21,7 @@ impl Shot{
     pub fn update(&mut self, delta: Duration){
         self.timer.tick(delta);
         if self.timer.finished() && !self.exploding{
-            if self.y > 0{self.y-=1;}
+            if self.y > 0 {self.y-=1;}
             self.timer.reset();
         }
     }

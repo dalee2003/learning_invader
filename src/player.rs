@@ -1,7 +1,8 @@
 use crate::{
     frame::{Drawable, Frame},
-    {NUM_COLS, NUM_ROWS},
+    invader::Invaders,
     shot::Shot,
+    {NUM_COLS, NUM_ROWS},
 };
 use std::time::Duration;
 
@@ -56,14 +57,6 @@ impl Player{
 impl Drawable for Player{
     fn draw(&self, frame: &mut Frame){
         frame[self.x][self.y] = "A";
-        // Clear the previous position
-        /*if self.prev_x < NUM_COLS && self.prev_y < NUM_ROWS {
-            frame[self.prev_y][self.prev_x] = " ";
-        }
-        // Draw the new position
-        if self.x < NUM_COLS && self.y < NUM_ROWS {
-            frame[self.y][self.x] = "A";
-        }*/
         for shot in self.shots.iter(){
             shot.draw(frame);
         }
